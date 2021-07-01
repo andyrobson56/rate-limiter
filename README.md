@@ -4,6 +4,9 @@
 This project is an exercise provided by AirTasker for backend engineers.  The objective is to build a simple rate limiter module that will allow *m* requests every *n* seconds and reject any requests beyond that.
 
 # Design Decisions
+## Overview
+I chose C# as my language of choice and have implemented the solution is a typical C# project and folder structure.  However, since the test is not about me demonstrating my knowledge and usage of the dotnet framework per se, I have omitted code that one would normally expect to see in a normal dotnet project, e.g. using a DI framework.
+
 ## Token Bucket Algorithm
 I decided to implement the [Token Bucket](https://en.wikipedia.org/wiki/Token_bucket) algorithm since it is a simple and relatively fast algorithm for rate limiting and since it's being used in telecommunication networks it must be pretty solid.  The disadvantage I see in using this algorithm is you could potentially get a surge of 999 requests in the last second of the hour, then 1000 request in the next second of the new hour, which, depending on the driver for the rate limiter may not be appropriate - if it's a business billing reason then it's fine, but if it's about managing performance then it may not be.
 
