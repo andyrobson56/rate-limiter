@@ -13,12 +13,13 @@ namespace AirTasker_RateLimiter.Services
     public class RateLimiter : IRateLimiter
     {
         private static SemaphoreSlim semaphore;
+        private const int concurrentRequestLimit = 1;
 
-        private int _requests;
-        private int _seconds;
-        private ITokenRepository _tokenRepository;
-        private ILogger _logger;
-        private IMetricLogger _metricLogger;
+        private readonly int _requests;
+        private readonly int _seconds;
+        private readonly ITokenRepository _tokenRepository;
+        private readonly ILogger _logger;
+        private readonly IMetricLogger _metricLogger;
 
         /// requests - number of requests allowed
         /// seconds - time allowed for requests
@@ -33,7 +34,7 @@ namespace AirTasker_RateLimiter.Services
             _logger = logger;
             _metricLogger = metricLogger;
 
-            semaphore = new SemaphoreSlim(1, 1);
+            semaphore = new SemaphoreSlim(concurrentRequestLimit, concurrentRequestLimit);
         }
 
         /// GetRequestCountToken
@@ -51,7 +52,7 @@ namespace AirTasker_RateLimiter.Services
                 countToken = await _tokenRepository.GetTokenByIdAsync(tokenId);
 
                 // do we have an unexpired token
-                if (countToken?.StartTime.AddSeconds(_seconds) > DateTime.UtcNow)
+                if (countToken?.StartTime.AddSeconds(_seconds) >= DateTime.UtcNow)
                 {
                     countToken = new RequestCountToken(countToken.StartTime, countToken.RequestCount + 1);
                 }
