@@ -2,7 +2,6 @@ using System;
 using Xunit;
 using Moq;
 using AirTasker_RateLimiter.Interfaces;
-using AirTasker_RateLimiter.Repositories;
 using AirTasker_RateLimiter.Services;
 using Serilog;
 using AirTasker_RateLimiter.Models;
@@ -30,7 +29,7 @@ namespace AirTasker_RateLimiter.UnitTests
             _metricLogger = new Mock<IMetricLogger>().Object;
         }
 
-        protected void Setup(RequestCountToken token, int requests, int seconds)
+        protected void Setup(RequestCountToken token, RateLimitLevels rateLimitLevels)
         {
             var mock = new Mock<ITokenRepository>();
 
@@ -39,18 +38,17 @@ namespace AirTasker_RateLimiter.UnitTests
 
             _tokenRepository = mock.Object;
 
-            _rateLimiter = new RateLimiter(requests, seconds, _tokenRepository, _logger, _metricLogger);
+            _rateLimiter = new RateLimiter(rateLimitLevels, _tokenRepository, _logger, _metricLogger);
         }
 
 
         [Fact]
         public async void RateLimiter_ShouldAcceptFirst()
         {
-            int allowedRequests = 1;
-            int allowedSeconds = HOUR;
+            var rateLimitLevels = new RateLimitLevels(seconds: HOUR, requests: 1);
             RequestCountToken token = null;
 
-            Setup(token, allowedRequests, allowedSeconds);
+            Setup(token, rateLimitLevels);
 
             var result = await _rateLimiter.IsRequestRateLimitedAsync(_request);
 
@@ -60,15 +58,10 @@ namespace AirTasker_RateLimiter.UnitTests
         [Fact]
         public async void RateLimiter_ShouldRejectWhenLimitReached()
         {
-            int allowedRequests = 100;
-            int allowedSeconds = 100;
+            var rateLimitLevels = new RateLimitLevels(seconds: 100, requests: 100);
+            var token = new RequestCountToken(startTime: DateTime.UtcNow, requestCount: 100);
 
-            var tokenStartTime = DateTime.UtcNow;
-            var requestsReceived = 100;
-
-            var expiredToken = new RequestCountToken(tokenStartTime, requestsReceived);
-
-            Setup(expiredToken, allowedRequests, allowedSeconds);
+            Setup(token, rateLimitLevels);
 
             var result = await _rateLimiter.IsRequestRateLimitedAsync(_request);
 
@@ -78,15 +71,10 @@ namespace AirTasker_RateLimiter.UnitTests
         [Fact]
         public async void RateLimiter_ShouldReturnErrorMessageOnReject()
         {
-            int allowedRequests = 100;
-            int allowedSeconds = 100;
+            var rateLimitLevels = new RateLimitLevels(seconds: 100, requests: 100);
+            var token = new RequestCountToken(startTime: DateTime.UtcNow, requestCount: 150);
 
-            var tokenStartTime = DateTime.UtcNow;
-            var requestsReceived = 150;
-
-            var expiredToken = new RequestCountToken(tokenStartTime, requestsReceived);
-
-            Setup(expiredToken, allowedRequests, allowedSeconds);
+            Setup(token, rateLimitLevels);
 
             var result = await _rateLimiter.IsRequestRateLimitedAsync(_request);
 
@@ -97,15 +85,12 @@ namespace AirTasker_RateLimiter.UnitTests
         [Fact]
         public async void RateLimiter_ShouldAcceptWithExpiredToken()
         {
-            int allowedRequests = 100;
-            int allowedSeconds = 100;
+            var rateLimitLevels = new RateLimitLevels(seconds: 100, requests: 100);
 
-            var tokenStartTime = DateTime.UtcNow.AddSeconds(-allowedSeconds - 10);
-            var requestsReceived = 150;
+            var expiredTokenStartTime = DateTime.UtcNow.AddSeconds(-110);
+            var expiredToken = new RequestCountToken(startTime: expiredTokenStartTime, requestCount: 150);
 
-            var expiredToken = new RequestCountToken(tokenStartTime, requestsReceived);
-
-            Setup(expiredToken, allowedRequests, allowedSeconds);
+            Setup(expiredToken, rateLimitLevels);
 
             var result = await _rateLimiter.IsRequestRateLimitedAsync(_request);
 

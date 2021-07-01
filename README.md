@@ -19,7 +19,7 @@ I created the ITokenRepository to abstract away the implementation of the reposi
 Essentially any significant code written in dotnet now would be using the async await pattern, and certainly something which would typically sit in the ASP.NET Core middleware should be using this.  So although it is overkill for the in memory repository, I felt the ITokenRepository should use async/await  and if I was to implement a Redis type repository, then it would definitely be required.
 
 ## Rate Limiting Strategy
-The RateLimiter as is, takes the 2 variables that define the request and time limits.  This allows a more generalised approach than that defined in the requirements.  
+The RateLimiter takes an IRateLimitLevel which wraps the 2 configuration items for the strategy.  This allows for a more generalised solution than is expressed in the requirements.
 
 ## Request Abstraction
 The very simple IRequest interface hides the complexity of how to determine which requests should be limited together.  In reality this could be based on any number of properties, e.g. requester IP address, API Key, logged in user - all depending on the business requirements.
@@ -31,7 +31,7 @@ I've created an IMetricLogger to demonstrate a simple metric recording interface
 ## Future Enhancements
 Beyond what is there, I can see some further enhancements that could be implemented without too much trouble.
 
-1. Create an IRateLimitStrategy abstraction to replace the request and seconds parameters of RateLimiter.  For instance to implement a burst rate strategy.
+1. Create an IRateLimitStrategy abstraction to replace the IRateLimitLevels parameters of RateLimiter.  For instance to implement a burst rate strategy.
 2. Mutliple rate limiting rules applied to a single request, for instance, 10 requests per second but also 300 requests per minute could be combined.
 3. Replace InMemoryTokenRepository with a shared state service such as Redis.
 4. Make the rate limiter variables as a configuration item, or even persisted so it could be changed at runtime.

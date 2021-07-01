@@ -15,8 +15,7 @@ namespace AirTasker_RateLimiter.Services
         private static SemaphoreSlim semaphore;
         private const int concurrentRequestLimit = 1;
 
-        private readonly int _requests;
-        private readonly int _seconds;
+        private readonly IRateLimitLevels _rateLimitLevels;
         private readonly ITokenRepository _tokenRepository;
         private readonly ILogger _logger;
         private readonly IMetricLogger _metricLogger;
@@ -26,10 +25,9 @@ namespace AirTasker_RateLimiter.Services
         /// tokenRepository - repository for storing of count tokens by Id
         /// logger - log messages
         /// metricLogger - performance metrics
-        public RateLimiter(int requests, int seconds, ITokenRepository tokenRepository, ILogger logger, IMetricLogger metricLogger)
+        public RateLimiter(IRateLimitLevels rateLimitLevels, ITokenRepository tokenRepository, ILogger logger, IMetricLogger metricLogger)
         {
-            _requests = requests;
-            _seconds = seconds;
+            _rateLimitLevels = rateLimitLevels;
             _tokenRepository = tokenRepository;
             _logger = logger;
             _metricLogger = metricLogger;
@@ -52,7 +50,7 @@ namespace AirTasker_RateLimiter.Services
                 countToken = await _tokenRepository.GetTokenByIdAsync(tokenId);
 
                 // do we have an unexpired token
-                if (countToken?.StartTime.AddSeconds(_seconds) >= DateTime.UtcNow)
+                if (countToken?.StartTime.AddSeconds(_rateLimitLevels.Seconds) >= DateTime.UtcNow)
                 {
                     countToken = new RequestCountToken(countToken.StartTime, countToken.RequestCount + 1);
                 }
@@ -83,7 +81,7 @@ namespace AirTasker_RateLimiter.Services
             {
                 var requestCountToken = await GetRequestCountToken(id);
 
-                if (requestCountToken.RequestCount <= _requests)
+                if (requestCountToken.RequestCount <= _rateLimitLevels.Requests)
                 {
                     return (200, string.Empty);
                 }
